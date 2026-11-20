@@ -1,0 +1,83 @@
+.panel { margin-top: var(--space); padding: var(--space); }
+.panel [data-slot="0"] { --slot-color: var(--blue); }
+.panel [data-slot="1"] { --slot-color: var(--red); }
+.panel :global(.section-head) { flex-wrap: wrap; }
+
+.layout {
+  display: grid;
+  grid-template-columns: clamp(90px, 10vw, 130px) minmax(0, 1fr) clamp(90px, 10vw, 130px);
+  grid-template-areas: "blue comparison red";
+  gap: var(--space);
+}
+
+.roster[data-team="blue"] { grid-area: blue; }
+.roster[data-team="red"] { grid-area: red; }
+.roster { display: flex; flex-direction: column; gap: var(--space); min-width: 0; }
+.roster > p {
+  display: flex; align-items: center; justify-content: center; gap: var(--space);
+  min-height: 25px; font-size: 12px; font-weight: 600;
+}
+.players { flex: 1; display: grid; grid-auto-rows: 1fr; gap: var(--space); min-width: 0; }
+.players button, .slots button {
+  position: relative; min-width: 0; border: 1px solid transparent; border-radius: var(--radius);
+  background: var(--row);
+}
+.players button {
+  display: grid; align-content: center; justify-items: center; gap: var(--space);
+  min-height: 74px; padding: 8px 4px; font-size: 12px; font-weight: 600;
+}
+.players button:hover, .slots button:hover { background: var(--raised); }
+.players button[aria-pressed="true"], .slots button[aria-pressed="true"] {
+  border-color: var(--slot-color);
+  background: color-mix(in srgb, var(--slot-color) 19%, var(--inset));
+}
+.players :global(.agent-avatar) { width: 46px; height: 46px; }
+.playerName { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  display: grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; border-radius: var(--chip-radius);
+  background: var(--slot-color); color: var(--bg); font: 600 12px/1 var(--mono);
+}
+.players .badge { position: absolute; top: 3px; left: 3px; }
+
+.comparison {
+  grid-area: comparison; min-width: 0; padding: 10px 0;
+  background: var(--scroll-surface); border-radius: var(--radius);
+}
+.slots, .summaries {
+  display: flex; justify-content: center; gap: var(--space);
+  padding-inline: var(--space);
+}
+.slots button, .summary {
+  display: flex; align-items: center; gap: var(--space); min-width: 0; flex: 0 1 168px;
+  padding: 5px 8px;
+}
+.slots button { min-height: 33px; border-color: var(--line); font-size: 12px; }
+.chart { width: 100%; height: 450px; }
+.otherAxes {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space);
+  padding: var(--space); font-size: 12px;
+}
+.otherAxes > div {
+  display: flex; align-items: center; gap: var(--space); padding: 3px 6px;
+  border-radius: var(--chip-radius); background: var(--row); color: var(--soft);
+}
+.otherAxes dd { display: flex; gap: var(--space); }
+.otherAxes [data-slot] { color: var(--slot-color); }
+.summaries { margin-top: var(--space); }
+.summary {
+  border-radius: var(--radius); border-top: 2px solid var(--slot-color);
+  background: var(--row); font-size: 12px;
+}
+.summary :global(.agent-avatar) { flex: 0 0 auto; }
+.summary p { color: var(--soft); white-space: nowrap; }
+
+@media (max-width: 680px) {
+  .layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "blue" "red" "comparison"; }
+  .roster { gap: 0; }
+  .roster > p { justify-content: flex-start; padding-inline: var(--space); }
+  .players { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); gap: 3px; }
+  .players button { min-height: 61px; padding: 4px 2px; gap: 3px; font-size: 11px; }
+  .players :global(.agent-avatar) { width: 30px; height: 30px; }
+  .players .badge { width: 14px; height: 14px; font-size: 10px; }
+  .chart { height: clamp(245px, 80vw, 420px); }
+}

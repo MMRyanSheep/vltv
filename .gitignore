@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+/target/
+/server/target/
+/web/node_modules/
+/web/.next/
+/web/next-env.d.ts
+/web/*.tsbuildinfo
+__pycache__/
+/training/.deps/
+/training/builds/
+/training/*.csv
+/tempReplay/
+/tempReport/
+/.vltv-cache/
