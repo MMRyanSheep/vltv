@@ -84,6 +84,39 @@ def snapshot_features(match, round_number, initial, state, plant_site, spike_rem
     )
 
 
+def iter_live_events(timeline, result):
+    round_end = result["end_time_ms"]
+    for event in timeline["events"]:
+        if event["type"] in ("spike_defused", "spike_exploded") or (
+            round_end is not None and event["time_ms"] > round_end
+        ):
+            break
+        yield event
+
+
+def iter_live_states(timeline, result):
+    """Yield live events with the Spike clock and any forced outcome after a kill."""
+    plant_time = None
+    plant_site = None
+    for event in iter_live_events(timeline, result):
+        time = event["time_ms"]
+        if event["type"] == "spike_planted":
+            plant_time = time
+            plant_site = event["site"]
+        # Replay clocks can incorporate the eventual explosion time.
+        fuse = None if plant_time is None else max(0, SPIKE_FUSE_MS - (time - plant_time))
+        terminal = None
+        if event["type"] == "kill":
+            after = event["after"]
+            if after["defenders_alive"] == 0:
+                terminal = 1.0
+            elif after["attackers_alive"] == 0 and plant_time is None:
+                terminal = 0.0
+        yield event, plant_site, fuse, terminal
+        if terminal is not None:
+            break
+
+
 def iter_round_rows(match, timeline, result):
     winner = result["winner_team_id"]
     if winner is None:
@@ -94,11 +127,8 @@ def iter_round_rows(match, timeline, result):
     attacker_won = int(winner == result["attacker_team_id"])
     initial = timeline["initial_state"]
     round_number = timeline["round_id"]
-    round_end = result["end_time_ms"]
-    plant_time = None
-    plant_site = None
 
-    def row(state, spike_remaining_ms=None):
+    def row(state, plant_site=None, spike_remaining_ms=None):
         return (
             *snapshot_features(
                 match, round_number, initial, state, plant_site, spike_remaining_ms
@@ -108,21 +138,11 @@ def iter_round_rows(match, timeline, result):
         )
 
     yield row(initial)
-    for event in timeline["events"]:
-        event_type = event["type"]
-        time = event["time_ms"]
-        if event_type in ("spike_defused", "spike_exploded") or (
-            round_end is not None and time >= round_end
-        ):
+    for event, plant_site, fuse, terminal in iter_live_states(timeline, result):
+        # The model learns live states. Scoring handles a forced outcome directly.
+        if terminal is not None:
             break
-        if event_type == "spike_planted":
-            plant_time = time
-            plant_site = event["site"]
-        # Use the live fuse. Replay clocks can incorporate the eventual explosion time.
-        spike_remaining_ms = (
-            None if plant_time is None else max(0, SPIKE_FUSE_MS - (time - plant_time))
-        )
-        yield row(event["after"], spike_remaining_ms)
+        yield row(event["after"], plant_site, fuse)
 
 
 def iter_match_rows(match, timelines):

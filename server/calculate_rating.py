@@ -3,7 +3,8 @@
 from collections import Counter, defaultdict
 from math import fsum
 
-from calculate_swing import damage_shares, iter_live_events
+from build_dataset import iter_live_events
+from calculate_swing import damage_shares
 
 
 RATING_VERSION = "1.0"

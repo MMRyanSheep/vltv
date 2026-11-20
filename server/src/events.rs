@@ -68,8 +68,13 @@ async fn event(
 ) -> Result<Json<Value>, ApiError> {
     sqlx::query_scalar(
         r#"SELECT to_jsonb(e) || jsonb_build_object(
-            'series', COALESCE((SELECT jsonb_agg(to_jsonb(s) - 'veto' ORDER BY starts_at, series_id)
-                                FROM event_schedule s WHERE s.event_id = e.event_id), '[]'),
+            'series', COALESCE((SELECT jsonb_agg(to_jsonb(s) - 'veto' ||
+                                    jsonb_build_object('actual_starts_at', m.played_at)
+                                    ORDER BY s.starts_at, s.series_id)
+                                FROM event_schedule s
+                                LEFT JOIN event_series_maps first_map ON first_map.series_id = s.series_id AND first_map.slot = 1
+                                LEFT JOIN matches m ON m.match_id = first_map.replay_id
+                                WHERE s.event_id = e.event_id), '[]'),
             'placements', COALESCE((SELECT jsonb_agg(to_jsonb(p) - 'event_id' ORDER BY first_place, team_id)
                                     FROM event_placements p WHERE p.event_id = e.event_id), '[]')
         ) FROM events e WHERE event_id = $1"#,

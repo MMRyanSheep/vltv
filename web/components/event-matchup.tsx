@@ -10,17 +10,21 @@ export function TeamLogo({ team }: { team: EventTeam }) {
   </span>;
 }
 
-export function EventMatchup({ series, fullNames, linkTeams }: { series: Series; fullNames?: boolean; linkTeams?: boolean }) {
+export function EventMatchup({ series, fullNames, linkTeams, showVersus }: {
+  series: Series; fullNames?: boolean; linkTeams?: boolean; showVersus?: boolean;
+}) {
   const { team_a, team_b, score_a, score_b, status } = series;
   const sideA = <><span>{fullNames ? team_a.name : team_a.tag}</span><TeamLogo team={team_a} /></>;
   const sideB = <><TeamLogo team={team_b} /><span>{fullNames ? team_b.name : team_b.tag}</span></>;
   return <span className="event-matchup">
     {linkTeams ? <Link className="event-side" href={teamHref(team_a.team_id)} title={team_a.name}>{sideA}</Link>
       : <span className="event-side" title={team_a.name}>{sideA}</span>}
-    <span className="match-score event-score mono" aria-label={status === "scheduled" ? "暂无比分" : `${team_a.tag} ${score_a} 比 ${score_b} ${team_b.tag}`}>
+    {showVersus && status === "scheduled" ? <span className="event-versus mono" aria-label="对阵">
+      <span aria-hidden="true">V</span><span aria-hidden="true">S</span>
+    </span> : <span className="match-score event-score mono" aria-label={status === "scheduled" ? "暂无比分" : `${team_a.tag} ${score_a} 比 ${score_b} ${team_b.tag}`}>
       <span className="blue" data-trailing={score_a < score_b}>{status === "scheduled" ? "–" : score_a}</span>
       <i>:</i><span className="red" data-trailing={score_b < score_a}>{status === "scheduled" ? "–" : score_b}</span>
-    </span>
+    </span>}
     {linkTeams ? <Link className="event-side" href={teamHref(team_b.team_id)} title={team_b.name}>{sideB}</Link>
       : <span className="event-side" title={team_b.name}>{sideB}</span>}
   </span>;

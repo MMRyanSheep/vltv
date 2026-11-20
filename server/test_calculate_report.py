@@ -1,6 +1,7 @@
 import unittest
 
 from calculate_report import calculate_ratings
+from build_dataset import iter_round_rows
 from calculate_rating import rating_components
 from calculate_swing import calculate_match
 import numpy as np
@@ -15,8 +16,9 @@ class Model:
 
 
 class SwingScoreTests(unittest.TestCase):
-    def score_kill(self, before=0.4, after=0.6, **damage):
-        result = {"round_id": 1, "attacker_team_id": "Red", "end_time_ms": 1000}
+    def round_fixture(self, **damage):
+        result = {"round_id": 1, "attacker_team_id": "Red", "defender_team_id": "Blue",
+                  "winner_team_id": "Red", "end_time_ms": 1000}
         match = {
             "match_id": "match",
             "map_id": "Lotus",
@@ -36,6 +38,10 @@ class SwingScoreTests(unittest.TestCase):
                 "before": state, "after": {**state, "defenders_alive": 1}, **damage,
             }],
         }
+        return match, result, timeline
+
+    def score_kill(self, before=0.4, after=0.6, **damage):
+        match, _, timeline = self.round_fixture(**damage)
         return calculate_match(Model(before, after), match, [timeline])
 
     def assert_scores(self, rows, expected, version):
@@ -61,6 +67,66 @@ class SwingScoreTests(unittest.TestCase):
     def test_opposing_team_damage_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Invalid damage_by_player"):
             self.score_kill(damage_by_player={"killer": 30, "victim": 90})
+
+    def test_terminal_kill_is_scored_and_ends_training_samples(self):
+        for kill_time in (900, 1000):
+            with self.subTest(kill_time=kill_time):
+                match, result, timeline = self.round_fixture(damage_by_player={"killer": 100})
+                kill = timeline["events"][0]
+                initial = timeline["initial_state"]
+                initial["defenders_alive"] = 1
+                kill["time_ms"] = kill_time
+                kill["before"]["defenders_alive"] = 1
+                kill["after"]["defenders_alive"] = 0
+                timeline["events"].append({**kill, "time_ms": kill_time})
+
+                training_rows = list(iter_round_rows(match, timeline, result))
+                self.assertEqual(len(training_rows), 1)
+                self.assert_scores(calculate_match(Model(0.4, 0.6), match, [timeline]),
+                                   (60, 0, -60), "1.2")
+
+    def test_live_kill_at_round_end_is_used_and_later_kills_are_ignored(self):
+        match, result, timeline = self.round_fixture(damage_by_player={"killer": 100})
+        kill = timeline["events"][0]
+        kill["time_ms"] = result["end_time_ms"]
+        timeline["events"].append({**kill, "time_ms": kill["time_ms"] + 1})
+
+        training_rows = list(iter_round_rows(match, timeline, result))
+        self.assertEqual(len(training_rows), 2)
+        self.assertEqual(training_rows[-1][:2], (2, 1))
+        self.assert_scores(calculate_match(Model(0.4, 0.6), match, [timeline]),
+                           (20, 0, -20), "1.2")
+
+    def test_attackers_wiped_after_plant_still_use_model(self):
+        match, result, timeline = self.round_fixture()
+        result["winner_team_id"] = "Blue"
+        kill = timeline["events"][0]
+        kill.update(killer_id="victim", victim_id="killer", damage_by_player={"victim": 100})
+        timeline["initial_state"]["attackers_alive"] = 1
+        kill["before"]["attackers_alive"] = 1
+        kill["after"] = {**kill["before"], "attackers_alive": 0}
+        timeline["events"] = [
+            {"type": "spike_planted", "time_ms": 200, "site": "A", "after": kill["before"]},
+            kill,
+            {"type": "spike_defused", "time_ms": 700},
+            {**kill, "time_ms": 700},
+        ]
+
+        training_rows = list(iter_round_rows(match, timeline, result))
+        self.assertEqual(len(training_rows), 3)
+        self.assertEqual(training_rows[-1][:5], (0, 2, 44.7, True, 44.7))
+        self.assert_scores(calculate_match(Model(0.4, 0.25), match, [timeline]),
+                           (-15, 0, 15), "1.2")
+
+    def test_unfinished_round_without_kills_counts_in_score_average(self):
+        match, result, timeline = self.round_fixture(damage_by_player={"killer": 100})
+        unfinished = {**result, "round_id": 2, "winner_team_id": None, "end_time_ms": None}
+        unfinished_timeline = {**timeline, "round_id": 2, "events": []}
+        match["rounds"].append(unfinished)
+
+        self.assertEqual(list(iter_round_rows(match, unfinished_timeline, unfinished)), [])
+        self.assert_scores(calculate_match(Model(0.4, 0.6), match, [timeline, unfinished_timeline]),
+                           (10, 0, -10), "1.2")
 
 
 class RatingTests(unittest.TestCase):

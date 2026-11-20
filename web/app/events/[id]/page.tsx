@@ -13,6 +13,6 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
   return <>
     <div className="breadcrumbs"><Link href="/events"><ArrowLeft size={16} />赛事</Link></div>
     <div className="page-heading archive-heading panel event-heading"><h1 className="page-title">{event.name}</h1></div>
-    <EventSchedule series={event.series} />
+    <EventSchedule series={event.series} detail={{ tier: event.tier, initialNow: Date.now() }} />
   </>;
 }

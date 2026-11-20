@@ -28,6 +28,7 @@ export type Series = {
   event_name: string;
   stage: string | null;
   starts_at: string;
+  actual_starts_at?: string | null;
   best_of: 1 | 3 | 5;
   team_a: EventTeam;
   team_b: EventTeam;
@@ -46,6 +47,21 @@ export type EventSchedule = { events: EventInfo[]; series: Series[] };
 export type EventManagement = { events: EventInfo[]; teams: EventTeam[]; replays: MatchSummary[] };
 
 export const seriesStatus = { scheduled: "未开始", live: "进行中", finished: "已结束" } as const;
+export const seriesStartTime = (series: Series) =>
+  series.status === "scheduled" ? series.starts_at : series.actual_starts_at ?? series.starts_at;
+
+const secondsPerDay = 86_400;
+
+export function seriesCountdown(startsAt: string, now: number) {
+  const remaining = Math.ceil((Date.parse(startsAt) - now) / 1000);
+  if (remaining <= 0) return null;
+  if (remaining > secondsPerDay) return `倒计时 ${Math.floor(remaining / secondsPerDay)}天`;
+  const hours = Math.floor(remaining / 3600);
+  const minutes = Math.floor(remaining / 60) % 60;
+  const seconds = remaining % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
 export const eventHref = (id: string) => `/events/${encodeURIComponent(id)}`;
 export const teamHref = (id: string) => `/teams/${encodeURIComponent(id)}`;
 export const placementLabel = (first: number, last: number) =>

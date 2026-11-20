@@ -18,7 +18,7 @@ from tempfile import TemporaryDirectory
 import lightgbm as lgb
 import pandas as pd
 
-from build_dataset import SPIKE_FUSE_MS, iter_matches, snapshot_features
+from build_dataset import iter_live_states, iter_matches, snapshot_features
 from training import FEATURES, TRAINING_DIR, prepare_features
 
 
@@ -27,48 +27,19 @@ SWINGSCORE_VERSION = "1.2"
 DAMAGE_SHARE = 0.5
 
 
-def iter_live_events(timeline, result):
-    round_end = result["end_time_ms"]
-    for event in timeline["events"]:
-        if event["type"] in ("spike_defused", "spike_exploded") or (
-            round_end is not None and event["time_ms"] > round_end
-        ):
-            break
-        yield event
-
-
 def iter_round_kills(match, timeline, result):
     round_number = timeline["round_id"]
     initial = timeline["initial_state"]
-    plant_time = None
-    plant_site = None
 
-    for event in iter_live_events(timeline, result):
-        time = event["time_ms"]
-        event_type = event["type"]
-        if event_type == "spike_planted":
-            plant_time = time
-            plant_site = event["site"]
-        if event_type != "kill":
+    for event, plant_site, fuse, terminal in iter_live_states(timeline, result):
+        if event["type"] != "kill":
             continue
 
-        # Both snapshots share the live clock used by the training dataset.
-        fuse = None if plant_time is None else max(0, SPIKE_FUSE_MS - (time - plant_time))
-        before_state = event["before"]
-        after_state = event["after"]
-        snapshots = (
+        snapshots = tuple(
             snapshot_features(match, round_number, initial, state, plant_site, fuse)
-            for state in (before_state, after_state)
+            for state in (event["before"], event["after"])
         )
-        # Wiping the attackers only ends the round before a Spike plant.
-        terminal_probability = None
-        if after_state["defenders_alive"] == 0:
-            terminal_probability = 1.0
-        elif after_state["attackers_alive"] == 0 and plant_time is None:
-            terminal_probability = 0.0
-        yield event, tuple(snapshots), terminal_probability
-        if terminal_probability is not None:
-            break
+        yield event, snapshots, terminal
 
 
 def kill_damage(event, teams):

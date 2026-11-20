@@ -28,6 +28,7 @@ FEATURES = (
     "round_number",
 )
 CATEGORICAL_FEATURES = ("map_id", "plant_site")
+MONOTONE_DIRECTIONS = {"attackers_alive": 1, "defenders_alive": -1}
 LABEL = "attacker_won"
 MATCH_ID = "match_id"
 
@@ -90,6 +91,8 @@ def fit_model(rows, seed, rounds):
             "learning_rate": 0.05,
             "num_leaves": 15,
             "min_data_in_leaf": 30,
+            "monotone_constraints": [MONOTONE_DIRECTIONS.get(feature, 0) for feature in FEATURES],
+            "monotone_constraints_method": "basic",
             "verbosity": -1,
             "num_threads": 4,
             "seed": seed,
