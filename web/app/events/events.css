@@ -3,20 +3,11 @@
   max-width: min(100%, 240px); height: 28px; padding: 0 var(--space);
   border: 0; border-radius: var(--radius); background: var(--raised); color: var(--text);
 }
-.event-schedule .event-row {
-  height: auto; min-height: 54px; grid-template-columns: 150px 70px minmax(230px, 1fr) 48px minmax(180px, 260px) 18px;
-  padding: 4px 12px; border-inline-start: 3px solid var(--primary);
-}
-.event-row-time, .event-row-title, .event-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.event-row-time { gap: 12px; }
-.event-row-title { align-self: stretch; padding: var(--space) 10px; background: var(--inset); border-radius: var(--radius); }
-.event-row-title > svg { color: var(--accent); flex: none; }
-.event-row-title > span, .event-row-title strong { overflow-wrap: anywhere; }
-.event-row-title strong, .profile-event-label strong { display: block; font-weight: 600; }
+.event-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.profile-event-label strong { display: block; font-weight: 600; }
 .event-row-replays, .event-status[data-status="live"] { color: var(--accent); }
 .event-status { color: var(--soft); white-space: nowrap; }
 .event-status[data-status="finished"] { color: var(--positive); }
-.event-format { color: var(--text); }
 .event-directory { display: flex; flex-wrap: wrap; gap: var(--space); padding: var(--space); margin-top: var(--space); }
 .event-directory a { white-space: normal; overflow-wrap: anywhere; }
 .event-team-logo {
@@ -30,16 +21,18 @@
 .event-score { flex: none; background: var(--inset); }
 
 .event-schedule .event-detail-row {
-  grid-template-columns: minmax(104px, .65fr) 48px minmax(220px, 2.65fr) minmax(92px, .7fr) minmax(180px, 1.2fr);
+  grid-template-columns: minmax(168px, .65fr) 48px minmax(220px, 2.65fr) minmax(92px, .7fr) minmax(180px, 1.2fr);
   grid-template-areas: "time format versus status label";
   height: auto; min-height: 44px; gap: 4px 12px; padding: 0 0 0 16px;
   overflow: hidden; background: var(--raised);
 }
 .event-schedule .event-detail-row:hover { background: var(--hover); }
-.event-detail-time { grid-area: time; }
+.event-detail-time { grid-area: time; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
 .event-detail-format { grid-area: format; }
 .event-detail-row .event-matchup { grid-area: versus; }
-.event-countdown { color: var(--host); font-size: 16px; white-space: nowrap; }
+.event-countdown { color: var(--host); font-size: 13px; }
+.event-detail-time .event-status { font-size: 13px; }
+.event-detail-time .event-status[data-status="finished"] { color: var(--soft); }
 .event-detail-status { grid-area: status; display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .event-detail-label {
   grid-area: label; align-self: stretch; display: flex; align-items: center; gap: 8px; min-width: 0;
@@ -85,6 +78,11 @@
 .series-tabs .map-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
 .series-tabs strong { font-size: 18px; }
 .series-replay { display: flex; justify-content: flex-end; }
+.series-kda { width: min(100%, 540px); }
+.series-kda table { min-width: 0; }
+.series-kda th:first-child { width: auto; }
+.series-kda th:last-child { width: 96px; }
+.series-kda-agent { display: inline-flex; align-items: center; gap: var(--space); }
 .scoreboard-agents { display: flex; gap: 3px; }
 .scoreboard .scoreboard-agents .agent-avatar { width: 24px; height: 24px; }
 
@@ -101,34 +99,20 @@
 
 @media (max-width: 830px) {
   .event-schedule .event-detail-row {
-    grid-template-columns: 104px 42px minmax(0, 1fr);
+    grid-template-columns: 168px 42px minmax(0, 1fr);
     grid-template-areas: "time format versus" "status status label";
     padding: 4px 0 0 10px;
   }
   .event-detail-row .event-matchup { padding-inline-end: 10px; }
   .event-detail-label { min-height: 32px; }
-  .event-schedule .event-row {
-    grid-template-columns: minmax(106px, auto) 44px minmax(0, 1fr) 18px;
-    grid-template-areas: "time format versus arrow" "title title title replays";
-  }
-  .event-row-time { grid-area: time; }
-  .event-row-title { grid-area: title; }
-  .event-format { grid-area: format; }
-  .event-row .event-matchup { grid-area: versus; }
-  .event-row-replays { grid-area: replays; }
-  .event-row-arrow { grid-area: arrow; }
 }
 @media (max-width: 500px) {
   .event-schedule .event-detail-row {
     grid-template-columns: 1fr auto auto;
     grid-template-areas: "time format status" "versus versus versus" "label label label";
   }
+  .event-detail-time { gap: 12px; }
   .event-detail-status { padding-inline-end: 10px; }
   .event-detail-label { padding-inline-start: 0; }
-  .event-schedule .event-row {
-    grid-template-columns: 1fr 42px 18px; padding: var(--space);
-    grid-template-areas: "time format arrow" "versus versus versus" "title title replays";
-  }
-  .event-row .event-matchup { padding-block: var(--space); }
   .series-hero .event-team-logo { width: 24px; height: 24px; }
 }

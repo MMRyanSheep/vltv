@@ -9,6 +9,6 @@ export default async function EventsPage() {
   const { events, series } = await readArchive<Schedule>("/events");
   return <>
     <div className="page-heading archive-heading panel event-heading"><h1 className="page-title">赛事</h1></div>
-    <EventSchedule series={series} events={events} />
+    <EventSchedule series={series} events={events} initialNow={Date.now()} />
   </>;
 }

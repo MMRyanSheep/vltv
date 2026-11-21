@@ -17,6 +17,7 @@ server/*
 !server/migrations/*.sql
 !server/src/
 !server/src/*.rs
+!server/src/team_detail.sql
 !scripts/
 !scripts/import-reports.py
 !training/

@@ -56,8 +56,12 @@ async fn schedule(State(state): State<AppState>) -> Result<Json<Value>, ApiError
     Ok(Json(sqlx::query_scalar(
         r#"SELECT jsonb_build_object(
             'events', COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY name, event_id) FROM events e), '[]'),
-            'series', COALESCE((SELECT jsonb_agg(to_jsonb(s) - 'veto' ORDER BY starts_at, series_id)
-                                FROM event_schedule s), '[]')
+            'series', COALESCE((SELECT jsonb_agg(to_jsonb(s) - 'veto' ||
+                                    jsonb_build_object('actual_starts_at', m.played_at)
+                                    ORDER BY s.starts_at, s.series_id)
+                                FROM event_schedule s
+                                LEFT JOIN event_series_maps first_map ON first_map.series_id = s.series_id AND first_map.slot = 1
+                                LEFT JOIN matches m ON m.match_id = first_map.replay_id), '[]')
         )"#,
     ).fetch_one(&state.db).await?))
 }

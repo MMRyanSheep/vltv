@@ -397,6 +397,11 @@ impl Roster {
             let Some(subject) = id.subject.as_ref().map(|s| s.to_ascii_lowercase()) else {
                 continue;
             };
+            let agent_id = agents.get(&subject);
+            // Observers can have a team assignment but no agent or character.
+            if agent_id.is_some_and(String::is_empty) && id.character_net_guids.is_empty() {
+                continue;
+            }
             let state = id.actor_net_guid;
             let assigned = evidence
                 .assigned_teams
@@ -422,8 +427,7 @@ impl Roster {
                 );
                 index
             } else {
-                let agent_id = agents
-                    .get(&subject)
+                let agent_id = agent_id
                     .with_context(|| format!("missing agent ID for {subject}"))?
                     .clone();
                 let index = roster.players.len();
@@ -944,6 +948,47 @@ fn round_deadline(samples: &[(u32, u32)], round: &Round, time: u32) -> Option<u3
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn roster_excludes_observer_without_an_agent_or_character() {
+        let manifest = Manifest {
+            friendly_name: String::new(),
+            replay_build: String::new(),
+            timestamp_ticks: None,
+            level_names_and_times: Vec::new(),
+            game_specific_data: vec![
+                r#"{"playerLoadouts":[{"subject":"observer","characterId":""},{"subject":"player","characterId":"agent"}]}"#.into(),
+            ],
+            players: vec![
+                Identity {
+                    actor_net_guid: 10,
+                    subject: Some("observer".into()),
+                    character_net_guids: Vec::new(),
+                },
+                Identity {
+                    actor_net_guid: 20,
+                    subject: Some("player".into()),
+                    character_net_guids: vec![21],
+                },
+            ],
+            quality: ManifestQuality {
+                content_blocks_lost: 0,
+                replay_data_trailing_bytes: 0,
+                event_layout_mismatches: 0,
+            },
+        };
+        let evidence = Evidence {
+            assigned_teams: BTreeMap::from([(10, vec![((0, 0), 1)]), (20, vec![((0, 0), 1)])]),
+            ..Evidence::default()
+        };
+        let teams = HashMap::from([(1, Team::Blue)]);
+        let roster = Roster::build(&manifest, &evidence, &teams).unwrap();
+        assert_eq!(roster.players.len(), 1);
+        assert_eq!(roster.players[0].player_id, "player");
+        assert_eq!(roster.by_guid, HashMap::from([(20, 0), (21, 0)]));
+        let snapshot = Rebuilder::new(roster.players.iter(), Team::Blue).snapshot(0, None);
+        assert_eq!(snapshot.attackers_alive, 1);
+    }
 
     #[test]
     fn replay_timestamp_uses_unreal_epoch() {

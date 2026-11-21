@@ -47,15 +47,20 @@ export type EventSchedule = { events: EventInfo[]; series: Series[] };
 export type EventManagement = { events: EventInfo[]; teams: EventTeam[]; replays: MatchSummary[] };
 
 export const seriesStatus = { scheduled: "未开始", live: "进行中", finished: "已结束" } as const;
-export const seriesStartTime = (series: Series) =>
-  series.status === "scheduled" ? series.starts_at : series.actual_starts_at ?? series.starts_at;
+export const seriesLiveWindowMs = 6 * 60 * 60 * 1000;
+
+export function seriesStatusAt(series: Pick<Series, "status" | "starts_at">, now: number): Series["status"] {
+  if (series.status !== "scheduled") return series.status;
+  const elapsed = now - Date.parse(series.starts_at);
+  return elapsed >= 0 && elapsed < seriesLiveWindowMs ? "live" : "scheduled";
+}
 
 const secondsPerDay = 86_400;
 
 export function seriesCountdown(startsAt: string, now: number) {
   const remaining = Math.ceil((Date.parse(startsAt) - now) / 1000);
   if (remaining <= 0) return null;
-  if (remaining > secondsPerDay) return `倒计时 ${Math.floor(remaining / secondsPerDay)}天`;
+  if (remaining > secondsPerDay) return `${Math.floor(remaining / secondsPerDay)}天`;
   const hours = Math.floor(remaining / 3600);
   const minutes = Math.floor(remaining / 60) % 60;
   const seconds = remaining % 60;
